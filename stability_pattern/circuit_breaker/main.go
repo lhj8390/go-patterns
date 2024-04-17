@@ -21,7 +21,7 @@ func Breaker(circuit Circuit, failureThreshold uint) Circuit {
 
 		d := consecutiveFailures - int(failureThreshold)
 		if d >= 0 {
-			shouldRetryAt := lastAttempt.Add(time.Second * 2 << d)
+			shouldRetryAt := lastAttempt.Add(time.Second * 1 << d)
 			if !time.Now().After(shouldRetryAt) {
 				m.RLock()
 				return "", errors.New("service unreachable")
@@ -49,21 +49,21 @@ func main() {
 
 	breakerFunc := Breaker(handler, 5)
 
-	//var wg sync.WaitGroup
-	//wg.Add(10)
-	for i := 0; i < 10; i++ {
-		//go func() {
-		result, err := breakerFunc(context.Background())
-		if err != nil {
-			fmt.Printf("error = [%+v] \n", err)
-			//wg.Done()
-			//return
-		}
-		fmt.Printf("result = [%+v] \n", result)
-		//wg.Done()
-		//}()
+	var wg sync.WaitGroup
+	wg.Add(100)
+	for i := 0; i < 100; i++ {
+		go func() {
+			result, err := breakerFunc(context.Background())
+			if err != nil {
+				fmt.Printf("error = [%+v] \n", err)
+				wg.Done()
+				return
+			}
+			fmt.Printf("result = [%+v] \n", result)
+			wg.Done()
+		}()
 	}
-	//wg.Wait()
+	wg.Wait()
 
 }
 
